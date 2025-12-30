@@ -1,0 +1,309 @@
+import java.util.Scanner;
+import java.util.regex.Pattern;
+
+public class DOrSULibraryBorrowersDirectorySystem {
+
+    // simple fixed-size storage
+    private static final int MAX = 100;
+    private static String[] names = new String[MAX];
+    private static String[] ids = new String[MAX];
+    private static String[] courses = new String[MAX];
+    private static String[] contacts = new String[MAX];
+    private static int[] books = new int[MAX];
+    private static int count = 0;
+
+    private static Scanner in = new Scanner(System.in);
+
+    public static void main(String[] args) {
+
+        // put some initial data for the test cases
+        preloadData();
+
+        System.out.println("===== DOrSU Library Borrower’s Directory System =====");
+
+        int choice;
+        do {
+            choice = getMenuChoice();
+            in.nextLine();        // clear leftover newline
+
+            switch (choice) {
+                case 1 -> addBorrower();
+                case 2 -> searchBorrower();
+                case 3 -> editBorrower();
+                case 4 -> displayAllBorrowers();
+                case 5 -> computeAverageBorrowedBooks();
+                case 6 -> System.out.println("Goodbye!");
+                default -> System.out.println("Invalid choice.");
+            }
+
+            System.out.println();
+        } while (choice != 6);
+    }
+
+    // ---------- Simple initial data for tests ----------
+    private static void preloadData() {
+        // 1: Juan (for search / edit tests)
+        names[0] = "Juan Dela Cruz";
+        ids[0] = "2023-00001";
+        courses[0] = "BSIT";
+        contacts[0] = "09123456780";
+        books[0] = 2;
+
+        // 2 and 3: just for average test
+        names[1] = "Ana Lopez";
+        ids[1] = "2023-00002";
+        courses[1] = "BSCS";
+        contacts[1] = "09123456781";
+        books[1] = 4;
+
+        names[2] = "Mark Reyes";
+        ids[2] = "2023-00003";
+        courses[2] = "BSIT";
+        contacts[2] = "09123456782";
+        books[2] = 3;
+
+        count = 3;
+    }
+
+    // ---------- Menu ----------
+    public static int getMenuChoice() {
+        System.out.println("-------------------------------------------");
+        System.out.println("1. Add borrower");
+        System.out.println("2. Search borrower by name or ID");
+        System.out.println("3. Edit borrower information");
+        System.out.println("4. Display all borrowers");
+        System.out.println("5. Compute average number of borrowed books");
+        System.out.println("6. Exit");
+        System.out.print("Choice: ");
+
+        while (!in.hasNextInt()) {
+            System.out.print("Enter a number from 1 to 6: ");
+            in.next();
+        }
+        return in.nextInt();
+    }
+
+    // ---------- Add Borrower ----------
+    public static void addBorrower() {
+        if (count >= MAX) {
+            System.out.println("List is full. Can't add more borrowers.");
+            return;
+        }
+
+        String name;
+        do {
+            System.out.print("Name: ");
+            name = in.nextLine().trim();
+        } while (!validateName(name));
+
+        String id;
+        do {
+            System.out.print("ID (YYYY-#####): ");
+            id = in.nextLine().trim();
+        } while (!validateID(id));
+
+        String course;
+        do {
+            System.out.print("Department / Course (e.g., BSIT): ");
+            course = in.nextLine().trim();
+        } while (!validateDepartmentOrCourse(course));
+
+        String contact;
+        do {
+            System.out.print("Contact number (11 digits, starts with 09): ");
+            contact = in.nextLine().trim();
+        } while (!validateContactNumber(contact));
+
+        int numBooks;
+        while (true) {
+            System.out.print("Number of borrowed books: ");
+            if (in.hasNextInt()) {
+                numBooks = in.nextInt();
+                if (numBooks >= 0) break;
+            } else {
+                in.next();
+            }
+            System.out.println("Invalid number. Try again.");
+        }
+
+        names[count] = name;
+        ids[count] = id;
+        courses[count] = course;
+        contacts[count] = contact;
+        books[count] = numBooks;
+        count++;
+
+        System.out.println("Borrower successfully added.");
+    }
+
+    // ---------- Search Borrower ----------
+    public static void searchBorrower() {
+        System.out.print("Search by (N)ame or (I)D? ");
+        String choice = in.nextLine().trim().toUpperCase();
+
+        System.out.print("Enter search value: ");
+        String key = in.nextLine().trim();
+
+        int index = -1;
+        if (choice.startsWith("I")) {            // by ID
+            for (int i = 0; i < count; i++) {
+                if (ids[i].equalsIgnoreCase(key)) {
+                    index = i;
+                    break;
+                }
+            }
+        } else {                                 // default: by name
+            for (int i = 0; i < count; i++) {
+                if (names[i].toLowerCase().contains(key.toLowerCase())) {
+                    index = i;
+                    break;
+                }
+            }
+        }
+
+        if (index == -1) {
+            System.out.println("Borrower not found.");
+        } else {
+            System.out.println("Borrower found:");
+            printBorrower(index);
+        }
+    }
+
+    // ---------- Edit Borrower ----------
+    public static void editBorrower() {
+        System.out.print("Enter ID of borrower to edit: ");
+        String id = in.nextLine().trim();
+
+        int index = -1;
+        for (int i = 0; i < count; i++) {
+            if (ids[i].equalsIgnoreCase(id)) {
+                index = i;
+                break;
+            }
+        }
+
+        if (index == -1) {
+            System.out.println("Borrower not found.");
+            return;
+        }
+
+        System.out.println("Current information:");
+        printBorrower(index);
+
+        System.out.println("Leave a field blank if you don't want to change it.");
+
+        System.out.print("New name: ");
+        String newName = in.nextLine().trim();
+        if (!newName.isEmpty() && validateName(newName)) {
+            names[index] = newName;
+        }
+
+        System.out.print("New department / course: ");
+        String newCourse = in.nextLine().trim();
+        if (!newCourse.isEmpty() && validateDepartmentOrCourse(newCourse)) {
+            courses[index] = newCourse;
+        }
+
+        System.out.print("New contact number: ");
+        String newContact = in.nextLine().trim();
+        if (!newContact.isEmpty() && validateContactNumber(newContact)) {
+            contacts[index] = newContact;
+        }
+
+        System.out.print("New number of borrowed books: ");
+        String booksInput = in.nextLine().trim();
+        if (!booksInput.isEmpty()) {
+            try {
+                int newBooks = Integer.parseInt(booksInput);
+                if (newBooks >= 0) {
+                    books[index] = newBooks;
+                } else {
+                    System.out.println("Books not changed (must be non-negative).");
+                }
+            } catch (NumberFormatException e) {
+                System.out.println("Invalid number. Books not changed.");
+            }
+        }
+
+        System.out.println("Borrower information updated.");
+    }
+
+    // ---------- Display All ----------
+    public static void displayAllBorrowers() {
+        if (count == 0) {
+            System.out.println("No borrowers yet.");
+            return;
+        }
+
+        System.out.println("----- Borrowers -----");
+        for (int i = 0; i < count; i++) {
+            System.out.println((i + 1) + ".");
+            printBorrower(i);
+            System.out.println();
+        }
+    }
+
+    // helper
+    private static void printBorrower(int i) {
+        System.out.println("  Name   : " + names[i]);
+        System.out.println("  ID     : " + ids[i]);
+        System.out.println("  Course : " + courses[i]);
+        System.out.println("  Contact: " + contacts[i]);
+        System.out.println("  Books  : " + books[i]);
+    }
+
+    // ---------- Average ----------
+    public static void computeAverageBorrowedBooks() {
+        if (count == 0) {
+            System.out.println("No borrowers yet, average is 0.");
+            return;
+        }
+
+        int sum = 0;
+        for (int i = 0; i < count; i++) {
+            sum += books[i];
+        }
+        double avg = (double) sum / count;
+        System.out.printf("Average number of borrowed books: %.2f%n", avg);
+    }
+
+    // ---------- Validation (using regex etc.) ----------
+    public static boolean validateName(String name) {
+        if (name.isEmpty()) {
+            System.out.println("Name cannot be empty.");
+            return false;
+        }
+        // letters, spaces, and simple punctuation
+        if (!Pattern.matches("[A-Za-z .'-]+", name)) {
+            System.out.println("Name contains invalid characters.");
+            return false;
+        }
+        return true;
+    }
+
+    public static boolean validateID(String id) {
+        // pattern like 2023-04567
+        if (!Pattern.matches("\\d{4}-\\d{5}", id)) {
+            System.out.println("Invalid ID format. Correct format is YYYY-#####.");
+            return false;
+        }
+        return true;
+    }
+
+    public static boolean validateDepartmentOrCourse(String course) {
+        if (!Pattern.matches("[A-Za-z0-9 ]{2,20}", course)) {
+            System.out.println("Invalid course/department.");
+            return false;
+        }
+        return true;
+    }
+
+    public static boolean validateContactNumber(String contact) {
+        // Philippine mobile style: 11 digits, starts with 09
+        if (!Pattern.matches("09\\d{9}", contact)) {
+            System.out.println("Invalid contact number.");
+            return false;
+        }
+        return true;
+    }
+}
